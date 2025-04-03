@@ -5,7 +5,8 @@ import { ApiResponse } from "../utils/apiresponse.js";
 export const createComplaint = async (req, res) => {
     try {
         const { type, message, transactionId } = req.body;
-        const userId = req.user.id; // Assuming authentication middleware
+        const userId = req.user._id; // Assuming authentication middleware
+        
 
         if (!["Billing Issue", "Meter Issue", "Power Outage", "Other", "Feedback"].includes(type)) {
             return res.status(400).json({ message: "Invalid complaint type" });

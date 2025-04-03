@@ -5,6 +5,7 @@ import "./controllers/cronjobs/cronJobs.js"; // Import the scheduled job
 
 const app = express();
 
+console.log(process.env.CORS_ORIGIN)
 app.use(cors({
     origin: process.env.CORS_ORIGIN, // Allow specific domains
     credentials: true // Allow cookies to be sent

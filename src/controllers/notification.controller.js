@@ -105,11 +105,21 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
 });
 
 export const getUnreadNotifications = asyncHandler(async (req, res) => {
-    const  userId  = req.user._id;
-     // Convert userId to ObjectId
-     const userObjectId = new mongoose.Types.ObjectId(userId);
- 
-     // Fetch unread notifications
-     const notifications = await Notification.find({ userId: userObjectId, read: false });
+    const userId = req.user._id;
+    
+    // Convert userId to ObjectId
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    // Fetch unread notifications for the specific user and global notifications
+    const notifications = await Notification.find({
+        $or: [
+            { userId: userObjectId, read: false },  // User-specific unread notifications
+            { userId: { $exists: false } },         // Global notifications (sent to everyone)
+            { userId: null }                        // Also includes explicitly null userId
+        ]
+    });
+
+   // console.log(notifications);
+
     res.status(200).json(new ApiResponse(200, "Unread notifications fetched", notifications));
 });

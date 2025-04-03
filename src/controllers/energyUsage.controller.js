@@ -2,6 +2,10 @@ import EnergyUsage from "../models/energyUsage.model.js";
 import { User } from "../models/user.models.js";
 import { Notification } from "../models/notification.model.js"; 
 import { sendAlertEmail } from "../utils/emailService.js"; 
+import mongoose from "mongoose"
+import { asyncHandler } from "../utils/asynchandler.js";
+import { ApiError } from "../utils/apierror.js";
+import { ApiResponse } from "../utils/apiresponse.js";
 
 const ENERGY_THRESHOLD = 500; // Threshold for alerting users
 const RATE_PER_UNIT = 10; // ₹10 per kWh
@@ -11,7 +15,7 @@ const DISCOUNT_RATE = 5; // ₹5 credited per surplus kWh
 export const addEnergyUsage = async (req, res) => {
     try {
         const { userId, consumedEnergy, surplusEnergy } = req.body;
-
+        //console.log(userId,consumedEnergy,surplusEnergy)
         //billing cycle
         const getBillingCycle = () => {
             const today = new Date();
@@ -36,7 +40,9 @@ export const addEnergyUsage = async (req, res) => {
             // ✅ Update existing record
             usageRecord.consumedEnergy += consumedEnergy;
             usageRecord.surplusEnergy += surplusEnergy;
-            usageRecord.meterReading += consumedEnergy - surplusEnergy; // Adjust meter reading
+            const meterReading = Math.max(0, consumedEnergy - surplusEnergy); // Ensure minimum 0
+
+            usageRecord.meterReading += meterReading; // Adjust meter reading
         } else {
             // ✅ Create new record if none exists
             usageRecord = new EnergyUsage({
@@ -82,12 +88,56 @@ export const addEnergyUsage = async (req, res) => {
 };
 
 // ✅ Get Energy Usage by User (Now includes surplus energy details)
+
 export const getEnergyUsageByUser = async (req, res) => {
     try {
-        const records = await EnergyUsage.find({ userId: req.params.userId });
+        //console.log("Request params:", req.params);
 
-        res.status(200).json(records);
+        const { userId } = req.params; // Extract userId correctly
+
+        // Validate userId format
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
+        }
+
+        // Find energy usage records by userId
+        const records = await EnergyUsage.find({ userId });
+
+        if (records.length === 0) {
+            return res.status(404).json({ message: "No energy usage records found for this user." });
+        }
+
+       // console.log("Energy usage records:", records);
+        res.status(200).json({ data: records });
     } catch (error) {
+        console.error("Error fetching energy usage:", error);
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getUsageByUser = asyncHandler(async (req, res) => {
+    try {
+        // Ensure user is authenticated
+        if (!req.user || !req.user._id) {
+            throw new ApiError(401, "Unauthorized: No user data found.");
+        }
+
+        const userId = req.user._id; // Extract user ID from authenticated user
+
+        // Validate userId format
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new ApiError(400, "Invalid user ID format.");
+        }
+
+        // Find energy usage records for the user
+        const records = await EnergyUsage.find({ userId }).select("-_id -__v"); // Excluding unnecessary fields
+
+        if (!records.length) {
+            throw new ApiError(404, "No energy usage records found for this user.");
+        }
+
+        res.status(200).json(new ApiResponse(200, records, "Energy usage fetched successfully"));
+    } catch (error) {
+        throw new ApiError(500, error.message || "Error fetching energy usage.");
+    }
+});

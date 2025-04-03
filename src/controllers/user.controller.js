@@ -102,7 +102,7 @@ const logInUser = asyncHandler(async(req,res)=>{
    // Generate token
 
    const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)
-
+  
 
    // Logged in user
 
@@ -126,6 +126,7 @@ const logInUser = asyncHandler(async(req,res)=>{
 
 const logOutUser = asyncHandler(async (req,res)=>{
    // Get user from cookie
+   //console.log(req.user._id)
     await User.findByIdAndUpdate(req.user._id,{
       $unset:{refreshToken:1}
     },
@@ -189,6 +190,20 @@ const getCurrentUser = asyncHandler(async(req,res)=>{
                   (new ApiResponse(200,req.user,"Fetched user data successfully"))
                )
 })
+
+export const getAllUsers = asyncHandler(async (req, res) => {
+   try {
+      const users = await User.find().select("-password -refreshToken"); // Exclude sensitive fields
+
+      if (!users || users.length === 0) {
+         throw new ApiError(404, "No users found");
+      }
+
+      return res.status(200).json(new ApiResponse(200, users, "Fetched all users successfully"));
+   } catch (error) {
+      throw new ApiError(500, "Something went wrong while fetching users");
+   }
+});
 
 
 export { 

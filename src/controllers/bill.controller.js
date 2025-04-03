@@ -21,9 +21,7 @@ const generateBill = asyncHandler(async (req, res) => {
         throw new ApiError(400, "No valid energy consumption record found");
     }
 
-    // Define per-unit cost
-    const perUnitCost = 5; // Example rate: ₹5 per unit
-    const amount = latestUsage.consumedEnergy * perUnitCost;
+    const amount = latestUsage.estimatedBill;
 
     // Create and save the bill
     const bill = await Bill.create({

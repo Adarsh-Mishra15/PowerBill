@@ -8,7 +8,7 @@ const ComplaintSchema = new mongoose.Schema({
     },
     message: String,
     transactionId: { 
-        type: mongoose.Schema.Types.ObjectId, 
+        type: mongoose.Schema.Types.Mixed, 
         ref: "Payment", 
         required: function() { return this.type === "Billing Issue"; } 
     },
